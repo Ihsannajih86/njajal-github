@@ -1,0 +1,136 @@
+import sqlite3
+
+# Sambung database (gawe yen ora ana)
+conn = sqlite3.connect('toko_online.db')
+cursor = conn.cursor()
+
+# Create tabel produk
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS produk (
+    id_produk INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama_produk TEXT NOT NULL,
+    harga INTEGER NOT NULL,
+    stok INTEGER NOT NULL
+)
+''')
+
+# Create tabel customer
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS customer (
+    id_customer INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama_customer TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    alamat TEXT NOT NULL,
+    no_hp TEXT NOT NULL
+)
+''')
+
+# Create tabel admin/kasir
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS admin (
+    id_admin INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama_admin TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    no_hp TEXT NOT NULL
+)
+''')
+
+# Create tabel pesenan
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS pesenan (
+    id_pesanan INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_customer INTEGER NOT NULL,
+    id_produk INTEGER NOT NULL,
+    jumlah INTEGER NOT NULL,
+    total_harga INTEGER NOT NULL,
+    FOREIGN KEY (id_customer) REFERENCES customer (id_customer),
+    FOREIGN KEY (id_produk) REFERENCES produk (id_produk)
+)
+''')
+
+# Create tabel invoice
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS invoice (
+    id_invoice INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_pesanan INTEGER NOT NULL,
+    id_admin INTEGER NOT NULL,
+    shipping_address TEXT NOT NULL,
+    payment_method TEXT NOT NULL,
+    shipping_method TEXT NOT NULL,
+    subtotal INTEGER NOT NULL,
+    shipping_cost INTEGER NOT NULL,
+    total_cost INTEGER NOT NULL,
+    FOREIGN KEY (id_pesanan) REFERENCES pesenan (id_pesanan),
+    FOREIGN KEY (id_admin) REFERENCES admin (id_admin)
+)
+''')
+
+# Insert data menyang tabel produk
+produk_data = [
+    ("Laptop A", 10000000, 10),
+    ("Mouse B", 50000, 50),
+    ("Keyboard C", 150000, 20),
+    ("Headset", 300000, 15),
+    ("VGA", 2500000, 8),
+    ("Processor", 4000000, 5),
+    ("PSU", 800000, 10),
+    ("RAM", 600000, 25),
+    ("SSD", 1200000, 12),
+    ("Monitor", 2000000, 7)
+]
+cursor.executemany('''INSERT INTO produk (nama_produk, harga, stok) VALUES (?, ?, ?)''', produk_data)
+
+# Insert data menyang tabel customer
+customer_data = [
+    ("Agir", "agir@example.com", "Jl. Mawar No.1", "081234567890"),
+    ("Tania", "tania@example.com", "Jl. Melati No.2", "081234567891"),
+    ("Sakura", "sakura@example.com", "Jl. Sakura No.3", "081234567892"),
+    ("Raiden Mei", "mei@example.com", "Jl. Raiden No.4", "081234567893"),
+    ("Prinz Eugen", "eugen@example.com", "Jl. Eugen No.5", "081234567894"),
+    ("Changli", "changli@example.com", "Jl. Chang No.6", "081234567895"),
+    ("Kiana", "kiana@example.com", "Jl. Kiana No.7", "081234567896"),
+    ("Bianca", "bianca@example.com", "Jl. Bianca No.8", "081234567897"),
+    ("Thelema", "thelema@example.com", "Jl. Thelema No.9", "081234567898"),
+    ("Bronya", "bronya@example.com", "Jl. Bronya No.10", "081234567899")
+]
+cursor.executemany('''INSERT INTO customer (nama_customer, email, alamat, no_hp) VALUES (?, ?, ?, ?)''', customer_data)
+
+# Insert data menyang tabel admin/kasir
+admin_data = [
+    ("sentot", "sentot@example.com", "081345678901"),
+    ("munyuk", "munyuk@example.com", "081345678902")
+]
+cursor.executemany('''INSERT INTO admin (nama_admin, email, no_hp) VALUES (?, ?, ?)''', admin_data)
+
+# Insert data menyang tabel pesenan
+pesenan_data = [
+    (1, 1, 2, 20000000),  # Agir tuku Laptop A 2 unit
+    (2, 2, 1, 50000)      # Tania tuku Mouse B 1 unit
+]
+cursor.executemany('''INSERT INTO pesenan (id_customer, id_produk, jumlah, total_harga) VALUES (?, ?, ?, ?)''', pesenan_data)
+
+# Insert data menyang tabel invoice
+invoice_data = [
+    (1, 1, "Jl. Mawar No.1", "Transfer Bank", "JNE: Truck and Ship", 20000000, 75000, 20075000),
+    (2, 2, "Jl. Melati No.2", "Transfer Bank", "JNE: Truck and Ship", 50000, 75000, 125000)
+]
+cursor.executemany('''INSERT INTO invoice (id_pesanan, id_admin, shipping_address, payment_method, shipping_method, subtotal, shipping_cost, total_cost) 
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', invoice_data)
+
+# Query gabungan antarane tabel customer, pesenan, lan invoice
+cursor.execute('''
+SELECT c.nama_customer, c.alamat, c.no_hp, p.nama_produk, pes.jumlah, pes.total_harga, i.shipping_address, i.payment_method, i.shipping_method, i.total_cost
+FROM pesenan pes
+JOIN customer c ON pes.id_customer = c.id_customer
+JOIN produk p ON pes.id_produk = p.id_produk
+JOIN invoice i ON pes.id_pesanan = i.id_pesanan
+''')
+hasil = cursor.fetchall()
+
+# Nampilake hasil query
+for row in hasil:
+    print(f"Customer: {row[0]}, Alamat: {row[1]}, No HP: {row[2]}, Produk: {row[3]}, Jumlah: {row[4]}, Total: {row[5]}, Shipping Address: {row[6]}, Payment: {row[7]}, Shipping: {row[8]}, Total Cost: {row[9]}")
+
+# Commit lan tutup database
+conn.commit()
+conn.close()
